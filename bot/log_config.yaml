@@ -1,0 +1,32 @@
+version: 1
+disable_existing_loggers: false # Important, otherwise the discord.py logs will not be logged. Keep this as false
+formatters:
+    standard:
+        format: '[%(asctime)s][%(threadName)s][%(name)s.%(funcName)s:%(lineno)d][%(levelname)s] %(message)s'
+handlers:
+    default_stream_handler:
+        class: logging.StreamHandler
+        formatter: standard
+        level: INFO
+        stream: ext://sys.stdout
+    default_file_handler:
+        backupCount: 5
+        class: logging.handlers.RotatingFileHandler
+        filename: bot.log
+        formatter: standard
+        level: DEBUG
+    error_file_handler:
+        backupCount: 5
+        class: logging.handlers.RotatingFileHandler
+        delay: true
+        filename: bot_error.log
+        formatter: standard
+        level: ERROR
+loggers:
+    '': # The root logger, best to leave it undefined (don't enter a string)
+        handlers:
+            - default_stream_handler
+            - default_file_handler
+            - error_file_handler
+        level: DEBUG
+        propagate: false

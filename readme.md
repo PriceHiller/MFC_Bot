@@ -2,8 +2,9 @@
 
 ## Running the bot
 
-Ensure you have seen **Configuration**, once all required settings are configured to run the bot;
-once done run the bot via: `python -m bot`
+Ensure you have seen **Configuration**. 
+
+Once all required settings are configured run the bot via: `python -m bot`
 
 
 ## Configuration

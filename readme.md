@@ -1,5 +1,11 @@
 # MFC Discord Bot
 
+## Running the bot
+
+Ensure you have seen **Configuration**, once all required settings are configured to run the bot;
+once done run the bot via: `python -m bot`
+
+
 ## Configuration
 
 All config values are passed via environment variables. See **Environment Variables**.
@@ -8,6 +14,14 @@ It is recommended to define a `.env` file in the `bot` directory with the bot to
 ```ini
 discord_bot_token="someDiscordBotToken"
 ```
+
+A requirements file is included to install all dependencies, to do so execute:
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+
 ## Logging
 
 For logging to work you *must* define a `log_config.yaml` file within the `bot` directory based on the the python
@@ -55,10 +69,12 @@ loggers:
         propagate: false
 ```
 
+
 ## Environment Variables
 
 It is highly encouraged that a `.env` file is defined in the `bot` directory with your variables. If you do not do this,
 you will need to export all of your variables into your local environment *before* running the bot.
+
 
 ### Discord Bot
 
@@ -67,6 +83,7 @@ All discord bot environment variables are preceded by `discord_bot_`
 | Variable Name      | Example Value                                                | Description 
 | :---               | :---                                                         | :---        
 | discord_bot_token  | Nzk3MDk0MTY2MjA2NzQyNTI5.P_2ajsp.clF0tD4CA0Nb-_MConBS9KVPsrE | Your discord bot's token, found at the [discord developer portal](https://discord.com/developers/applications)
+
 
 ### Logging
 

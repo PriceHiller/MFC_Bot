@@ -24,7 +24,7 @@ class Bot(AutoShardedBot):
 
     async def on_command(self, ctx: Context):
         """
-        Override the on_command function to log all command usages through the bot
+        Override the on_command function to log all command usages through the Bot
         """
 
         try:

@@ -1,7 +1,7 @@
-from bot import Bot
+from Bot import Bot
 
-from bot.cogs import BaseCog
-from bot.cogs import command
+from Bot.Cogs import BaseCog
+from Bot.Cogs import command
 
 
 class Ping(BaseCog):

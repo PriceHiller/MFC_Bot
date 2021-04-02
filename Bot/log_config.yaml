@@ -12,7 +12,7 @@ handlers:
     default_file_handler:
         backupCount: 5
         class: logging.handlers.RotatingFileHandler
-        filename: bot.log
+        filename: Bot.log
         formatter: standard
         level: DEBUG
     error_file_handler:

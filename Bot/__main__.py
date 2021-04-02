@@ -6,10 +6,10 @@ import uvloop
 
 from dotenv import load_dotenv
 
-from bot import bot
-from bot import root_path
-from bot import setup_logging
-from bot.cogs import BaseCog
+from Bot import bot
+from Bot import root_path
+from Bot import setup_logging
+from Bot.Cogs import BaseCog
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ log = logging.getLogger(__name__)
 def main():
     environment_path = root_path / ".env"
     if not environment_path.exists():
-        log.warning("A .env file is not defined in the bot directory, "
+        log.warning("A .env file is not defined in the Bot directory, "
                     "ensure your variables are exported in the environment")
 
     load_dotenv(environment_path)

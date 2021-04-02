@@ -2,8 +2,8 @@ import logging
 
 from discord import Member
 
-from bot.cogs import BaseCog
-from bot.cogs import listener
+from Bot.Cogs import BaseCog
+from Bot.Cogs import listener
 
 log = logging.getLogger(__name__)
 

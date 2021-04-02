@@ -3,8 +3,8 @@ import pkgutil
 
 import logging
 
-from bot import bot
-from bot import Bot
+from Bot import bot
+from Bot import Bot
 
 from discord.ext import commands
 from discord.ext.commands import Cog
@@ -19,7 +19,7 @@ class BaseCog(commands.Cog):
         self.bot = bot
 
     @staticmethod
-    def find_subclasses(package: str = "bot.cogs", recursive: bool = True) -> None:
+    def find_subclasses(package: str = "Bot.Cogs", recursive: bool = True) -> None:
         """ Import all submodules of a module, recursively, including subpackages
 
         Credit to: https://stackoverflow.com/a/25562415/13079078, Mr. B on stackoverflow

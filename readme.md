@@ -70,7 +70,7 @@ All discord bot environment variables are preceded by `discord_bot_`
 
 ### Logging
 
-All logging environment variables are peceded by `log_`
+All logging environment variables are preceded by `log_`
 
 | Variable Name   | Example Value                           | Description
 | :---            | :---                                    | :---

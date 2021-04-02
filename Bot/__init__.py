@@ -9,15 +9,24 @@ from pathlib import Path
 from discord.ext.commands import AutoShardedBot
 from discord.ext.commands import Context
 from discord import Intents
+from dotenv import load_dotenv
 
 root_path = Path(__file__).parent
 log = logging.getLogger(__name__)
+
+environment_path = root_path / ".env"
+
+if environment_path.exists():
+    load_dotenv(environment_path)
+else:
+    log.warning("A .env file is not defined in the Bot directory, "
+                "ensure your variables are exported in the environment")
 
 
 class Bot(AutoShardedBot):
 
     def __init__(self,
-                 command_prefix: str = "!",
+                 command_prefix: str = os.getenv("discord_bot_prefix", default="!"),
                  **options):
 
         super().__init__(command_prefix, **options)
@@ -37,6 +46,7 @@ class Bot(AutoShardedBot):
 
     async def on_ready(self):
         log.info(f"Logged in as {self.user} ({self.user.id})")
+        log.info(f"Prefix is set to \"{self.command_prefix}\"")
         log.info(f"Have access to the following guilds: "
                  f"{', '.join([str(guild.name) + ' (' + str(guild.id) + ')' for guild in self.guilds])}")
 

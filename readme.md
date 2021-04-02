@@ -84,6 +84,16 @@ All discord bot environment variables are preceded by `discord_bot_`
 | Variable Name      | Example Value                                                | Description 
 | :---               | :---                                                         | :---        
 | discord_bot_token  | Nzk3MDk0MTY2MjA2NzQyNTI5.P_2ajsp.clF0tD4CA0Nb-_MConBS9KVPsrE | Your discord bot's token, found at the [discord developer portal](https://discord.com/developers/applications)
+| discord_bot_prefix | !                                                            | The prefix used to invoke bot commands, e.g. `!help`
+
+### API
+
+All api environment variables are preceded by `api_`
+
+| Variable Name | Example Value  | Description
+| :---          | :---           | :---
+| api_url       | 127.0.0.1:5000 | The HTTP(S) url of the MFC API
+| api_token     | wd23sawWAsjdae | The login (authorization) jwt token granted by the api
 
 
 ### Logging

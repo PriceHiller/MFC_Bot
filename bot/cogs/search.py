@@ -12,12 +12,12 @@ class Search(BaseCog):
 
     @search.command(aliases=["g"])
     async def google(self, ctx, *message: str):
-        """Returns a google search with search query"""
+        """Returns a google search with search query, aliases: g"""
         message = "+".join(message)
         await ctx.send(f"https://www.google.com/search?q={message}")
 
     @search.command(aliases=["b"])
     async def bing(self, ctx, *message: str):
-        """Returns a bing search with search query"""
+        """Returns a bing search with search query, aliases: b"""
         message = "+".join(message)
         await ctx.send(f"https://www.bing.com/search?q={message}")

@@ -59,7 +59,7 @@ class MatchPlanning(BaseCog):
                         error = True
                         break
                     emojis.append(emoji)
-                    signup_message += f"{emoji} for {time}"
+                    signup_message += f"{emoji} for {time} "
                 if error:
                     for message in output_messages:
                         await message.delete()

@@ -1,0 +1,45 @@
+{
+    "MFC-Guild": {
+        "Error-Channel": 827315026074796042,
+        "Admins": {
+            "Commands": ["*"],
+            "Ids": [797088872948301854]
+        },
+        "Moderators": {
+            "Commands": [],
+            "Ids": []
+        },
+        "Specific-User-Perm": {
+        },
+        "Prefix": "-",
+        "Id": 797088210928009246,
+        "Match-Planning": {
+            "Ping-Role": 797088872948301854,
+            "Channel-ID": 827315026074796042,
+            "Post": "Friday",
+            "Timezone": "EST",
+            "Days": {
+                "Wednesday": {
+                    "8pm": "1️⃣",
+                    "9pm": "2️⃣",
+                    "10pm": "3️⃣"
+                },
+                "Thursday": {
+                    "8pm": "1️⃣",
+                    "9pm": "2️⃣",
+                    "10pm": "3️⃣"
+                },
+                "Friday": {
+                    "8pm": "1️⃣",
+                    "9pm": "2️⃣",
+                    "10pm": "3️⃣"
+                },
+                "Saturday": {
+                    "8pm": "1️⃣",
+                    "9pm": "2️⃣",
+                    "10pm": "3️⃣"
+                }
+            }
+        }
+    }
+}

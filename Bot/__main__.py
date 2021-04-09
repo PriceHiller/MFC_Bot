@@ -22,7 +22,7 @@ def main():
     BaseCog.find_subclasses()
     BaseCog.load_cogs()
 
-    loop.create_task(bot.start(os.environ["discord_bot_token"]))
+    loop.create_task(bot.start(os.environ["DISCORD_BOT_TOKEN"]))
 
     try:
         loop.run_forever()

@@ -6,15 +6,23 @@ import yaml
 from logging import config
 from pathlib import Path
 
+from discord.ext import commands
 from discord.ext.commands import AutoShardedBot
 from discord.ext.commands import Context
 from discord import Intents
 from dotenv import load_dotenv
 
+from Bot.Config.config import Config
+
+
 root_path = Path(__file__).parent
 log = logging.getLogger(__name__)
 
-environment_path = root_path / ".env"
+environment_path = root_path.parent / ".env"
+
+config_path = root_path.parent / "config.json"
+
+bot_config = Config(config_path)
 
 if environment_path.exists():
     load_dotenv(environment_path)
@@ -26,10 +34,13 @@ else:
 class Bot(AutoShardedBot):
 
     def __init__(self,
-                 command_prefix: str = os.getenv("discord_bot_prefix", default="!"),
+                 command_prefix: str = (bot_config.prefix or "-"),
                  **options):
-
         super().__init__(command_prefix, **options)
+
+    # async def on_command_error(self, ctx: commands.Context, exception: commands.errors.CommandInvokeError):
+    #     if isinstance(exception, commands.MissingPermissions):
+    #         await ctx.send(f"{ctx.author.mention}, you lack the permissions to use this command!", delete_after=10)
 
     async def on_command(self, ctx: Context):
         """

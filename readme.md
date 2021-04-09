@@ -83,27 +83,26 @@ you will need to export all of your variables into your local environment *befor
 
 ### Discord Bot
 
-All discord bot environment variables are preceded by `discord_bot_`
+All discord bot environment variables are preceded by `DISCORD_BOT_`
 
 | Variable Name      | Example Value                                                | Description 
-| :---               | :---                                                         | :---        
-| discord_bot_token  | Nzk3MDk0MTY2MjA2NzQyNTI5.P_2ajsp.clF0tD4CA0Nb-_MConBS9KVPsrE | Your discord bot's token, found at the [discord developer portal](https://discord.com/developers/applications)
-| discord_bot_prefix | !                                                            | The prefix used to invoke bot commands, e.g. `!help`
+| :---               | :---                                                         | :---
+| DISCORD_BOT_TOKEN  | Nzk3MDk0MTY2MjA2NzQyNTI5.P_2ajsp.clF0tD4CA0Nb-_MConBS9KVPsrE | Your discord bot's token, found at the [discord developer portal](https://discord.com/developers/applications)
 
 ### API
 
-All api environment variables are preceded by `api_`
+All api environment variables are preceded by `API_`
 
 | Variable Name | Example Value  | Description
 | :---          | :---           | :---
-| api_url       | 127.0.0.1:5000 | The HTTP(S) url of the MFC API
-| api_token     | wd23sawWAsjdae | The login (authorization) jwt token granted by the api
+| API_URL       | 127.0.0.1:5000 | The HTTP(S) url of the MFC API
+| API_URL       | wd23sawWAsjdae | The login (authorization) jwt token granted by the api
 
 
 ### Logging
 
-All logging environment variables are preceded by `log_`
+All logging environment variables are preceded by `LOG_`
 
 | Variable Name   | Example Value                           | Description
 | :---            | :---                                    | :---
-| log_config_path | /Users/user/MFC_Bot/bot/log_config.yaml | The path (including the name of the file) of your log config.
+| LOG_CONFIG_PATH | /Users/user/MFC_Bot/bot/log_config.yaml | The path (including the name of the file) of your log config.

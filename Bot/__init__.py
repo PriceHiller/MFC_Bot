@@ -1,12 +1,14 @@
 import logging
 import os
+import asyncio
 
 import yaml
 
 from logging import config
 from pathlib import Path
 
-from discord.ext import commands
+from discord import Embed
+from discord import Color
 from discord.ext.commands import AutoShardedBot
 from discord.ext.commands import Context
 from discord import Intents
@@ -41,6 +43,22 @@ class Bot(AutoShardedBot):
     # async def on_command_error(self, ctx: commands.Context, exception: commands.errors.CommandInvokeError):
     #     if isinstance(exception, commands.MissingPermissions):
     #         await ctx.send(f"{ctx.author.mention}, you lack the permissions to use this command!", delete_after=10)
+
+    def default_embed(self, **embed_kwargs):
+        class DefaultEmbed(Embed):
+
+            def __init__(self, **kwargs):
+                color_rgb = bot_config.config_dict["Embed-Color"]
+                super().__init__(color=Color.from_rgb(r=color_rgb["r"], g=color_rgb["g"], b=color_rgb["b"]),
+
+                                 **kwargs)
+
+        embed = DefaultEmbed(**embed_kwargs)
+
+        embed.set_author(name=self.user.display_name,
+                         url=os.getenv("API_URL", default="https://www.discord.com"),
+                         icon_url=self.user.avatar_url)
+        return embed
 
     async def on_command(self, ctx: Context):
         """

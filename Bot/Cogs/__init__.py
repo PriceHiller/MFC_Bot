@@ -4,7 +4,6 @@ import json
 
 import logging
 
-from Bot import bot
 from Bot import Bot
 
 from discord.ext import commands
@@ -38,7 +37,7 @@ class BaseCog(commands.Cog):
                 BaseCog.find_subclasses(full_name, recursive)
 
     @staticmethod
-    def load_cogs() -> None:
+    def load_cogs(bot: Bot) -> None:
         for subclass in BaseCog.__subclasses__():
             bot.add_cog(subclass(bot))
             log.info(f"Loaded cog: {subclass.__name__} ({subclass.__module__})")

@@ -1,3 +1,7 @@
+# Todo
+
+- [ ] Convert all JSON models within config.json to a pydantic schema
+
 # MFC Discord Bot
 
 ## Running the bot

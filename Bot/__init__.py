@@ -5,8 +5,10 @@ import yaml
 
 from logging import config
 from pathlib import Path
+from urllib import parse
 
 from aiohttp import ClientSession
+from aiohttp.client_exceptions import ClientConnectionError
 
 from discord import Embed
 from discord import Color
@@ -75,6 +77,12 @@ class Bot(AutoShardedBot):
                      f'\"{ctx.message.content}\" in DMs ({ctx.channel.id})')
 
     async def on_ready(self):
+        json_data = await APIRequest.post("/user/verify")
+        if json_data["status"] == 200:
+            log.info(f"Connected and authenticated with the API at: {APIRequest.api_url}")
+        else:
+            log.warning(f"Could not connect or unauthenticated with the API at: {APIRequest.api_url}, "
+                        f"status code: {json_data['status']}")
         log.info(f"Logged in as {self.user} ({self.user.id})")
         log.info(f"Prefix is set to \"{self.command_prefix}\"")
         log.info(f"Have access to the following guilds: "
@@ -83,17 +91,57 @@ class Bot(AutoShardedBot):
 
 class APIRequest:
     api_url = os.getenv("API_URL").strip("/")
+    log.debug(f"API url registered as {api_url}")
     api_token = os.getenv("API_TOKEN")
+    headers = {"Authorization": "Bearer " + api_token}
 
-    async def get(self, endpoint: str = "/") -> dict:
-        async with ClientSession() as session:
-            async with session.get(self.api_url + endpoint) as get_session:
-                return await get_session.json()
+    @staticmethod
+    def verify_url(url: str, checks=("scheme", "netloc")):
+        valid_url = parse.urlparse(url)
+        return all([getattr(valid_url, check_attr) for check_attr in checks])
 
-    async def post(self, data: dict, endpoint: str = "/") -> dict:
-        async with ClientSession() as session:
-            async with session.post(self.api_url + endpoint, data=data) as post_session:
-                return await post_session.json()
+    @classmethod
+    async def get(cls, endpoint: str = "/") -> [dict, int]:
+        fail_return_dict = {"status": 418}
+        full_url = cls.api_url + endpoint
+        if not cls.verify_url(full_url):
+            log.warning(f"URL {full_url} is not a valid url!")
+            return {"status": 418}
+        async with ClientSession(headers=cls.headers) as session:
+            try:
+                log.debug(f"GET request issued to {full_url}")
+                async with session.get(full_url, ssl=False) as get_session:
+                    json_dict = await get_session.json()
+                    if not json_dict:
+                        json_dict = {}
+                    json_dict |= {"status": get_session.status}
+                    return json_dict
+            except ClientConnectionError as error:
+                log.warning(f"Could not connect to the API at url {cls.api_url}, error: {error}")
+                return fail_return_dict
+            except UnicodeError:
+                log.warning(f"Unicode error thrown due to URL, likely malformed, URL: {full_url}")
+                return fail_return_dict
+
+    @classmethod
+    async def post(cls, endpoint: str = "/", data: dict = None) -> [dict, int]:
+        fail_return_dict = {"status": 418}
+        full_url = cls.api_url + endpoint
+        if not cls.verify_url(full_url):
+            log.warning(f"URL {full_url} is not a valid url!")
+            return fail_return_dict
+        async with ClientSession(headers=cls.headers) as session:
+            try:
+                log.debug(f"POST request issued to {full_url}")
+                async with session.post(full_url, data=data, ssl=False) as post_session:
+                    json_dict = await post_session.json()
+                    if not json_dict:
+                        json_dict = {}
+                    json_dict |= {"status": post_session.status}
+                    return json_dict
+            except UnicodeError:
+                log.warning(f"Unicode error thrown due to URL, likely malformed, URL: {full_url}")
+                return fail_return_dict
 
 
 def setup_logging() -> None:

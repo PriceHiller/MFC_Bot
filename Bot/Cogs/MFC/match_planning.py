@@ -22,7 +22,6 @@ class MatchPlanning(BaseCog):
 
     def __init__(self, bot: Bot):
         bot.loop.create_task(self.plan_loop(), name=self.plan_loop_name)
-        self.plan_loop.start()
         super().__init__(bot)
 
     @command.group()
@@ -59,6 +58,7 @@ class MatchPlanning(BaseCog):
             await bot_config.write(bot_config)
 
     async def post_match_planning(self):
+        log.info(f"Posting Match Planning")
         planning_dict = bot_config.config_dict["MFC-Guild"]["Match-Planning"]
         channel_id = planning_dict["Channel-ID"]
         if channel := self.bot.get_channel(channel_id):
@@ -70,8 +70,8 @@ class MatchPlanning(BaseCog):
                 return
             timezone = planning_dict["Timezone"]
             plan_days = planning_dict["Days"]
-            output_messages = [await channel.send(ping_role.mention),
-                               await channel.send(f"__All times below are in {timezone}__")]
+            output_messages = [await channel.send(ping_role.mention + " Sign ups for this week."),
+                               await channel.send(f"__All times below are in {timezone}__"),]
             react_messages = []
             error = False
             for day in plan_days.keys():

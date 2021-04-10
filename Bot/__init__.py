@@ -1,21 +1,22 @@
 import logging
 import os
-import asyncio
 
 import yaml
 
 from logging import config
 from pathlib import Path
 
+from aiohttp import ClientSession
+
 from discord import Embed
 from discord import Color
 from discord.ext.commands import AutoShardedBot
 from discord.ext.commands import Context
 from discord import Intents
+
 from dotenv import load_dotenv
 
 from Bot.Config.config import Config
-
 
 root_path = Path(__file__).parent
 log = logging.getLogger(__name__)
@@ -78,6 +79,21 @@ class Bot(AutoShardedBot):
         log.info(f"Prefix is set to \"{self.command_prefix}\"")
         log.info(f"Have access to the following guilds: "
                  f"{', '.join([str(guild.name) + ' (' + str(guild.id) + ')' for guild in self.guilds])}")
+
+
+class APIRequest:
+    api_url = os.getenv("API_URL").strip("/")
+    api_token = os.getenv("API_TOKEN")
+
+    async def get(self, endpoint: str = "/") -> dict:
+        async with ClientSession() as session:
+            async with session.get(self.api_url + endpoint) as get_session:
+                return await get_session.json()
+
+    async def post(self, data: dict, endpoint: str = "/") -> dict:
+        async with ClientSession() as session:
+            async with session.post(self.api_url + endpoint, data=data) as post_session:
+                return await post_session.json()
 
 
 def setup_logging() -> None:

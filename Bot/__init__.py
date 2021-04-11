@@ -81,6 +81,16 @@ class Bot(AutoShardedBot):
         error = getattr(exception, "original", exception)
         if isinstance(error, commands.errors.CheckFailure):
             log.debug(f"Check function checking command {ctx.command} failed")
+        elif isinstance(error, commands.errors.MissingRequiredArgument):
+            log.debug(f"Argument was missing for {ctx.command}, {exception}")
+            split_exception = str(exception).split(" ")
+            await ctx.send("`" + split_exception[0] + "` " + " ".join(split_exception[1:]).strip(".")
+                           + f" for the command: `{ctx.command}`. See `{ctx.prefix}help {ctx.command}`.")
+        else:
+            try:
+                raise exception
+            except Exception:
+                log.exception("Re-raised a caught exception for log")
 
     async def on_command(self, ctx: Context):
         """
@@ -126,7 +136,7 @@ class APIRequest:
         return all([getattr(valid_url, check_attr) for check_attr in checks])
 
     @classmethod
-    async def get(cls, endpoint: str = "/") -> [dict, int]:
+    async def get(cls, endpoint: str = "/") -> Response:
         full_url = cls.api_url + endpoint
         if not cls.verify_url(full_url):
             return cls.Response({}, 418)
@@ -144,7 +154,7 @@ class APIRequest:
                 return cls.Response({}, 400)
 
     @classmethod
-    async def post(cls, endpoint: str = "/", data: dict = None) -> [dict, int]:
+    async def post(cls, endpoint: str = "/", data: dict = None) -> Response:
         full_url = cls.api_url + endpoint
         if not cls.verify_url(full_url):
             log.warning(f"URL {full_url} is not a valid url!")
@@ -214,5 +224,6 @@ __all__ = [
     "bot",
     "dynamic_env_parse",
     "setup_logging",
-    "Bot"
+    "Bot",
+    "APIRequest"
 ]

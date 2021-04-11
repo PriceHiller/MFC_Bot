@@ -54,11 +54,11 @@ class MatchPlanning(BaseCog):
         elif self.planning_posted:
             self.planning_posted = False
             bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = False
-            await bot_config.write(bot_config)
+            await bot_config.write(bot_config.config_dict)
 
     @plan.command()
     @Permissions.is_permitted()
-    async def dump(self, ctx: command.Context):
+    async def dump(self, ctx: command.Context, delete: bool = True):
         match_planning_dict = bot_config.config_dict["MFC-Guild"]["Match-Planning"]
         guild: discord.Guild = ctx.guild
         if not guild:
@@ -117,8 +117,11 @@ class MatchPlanning(BaseCog):
         file_path = Path("signups.csv")
         await loop.run_in_executor(None, write_csv, react_dict, file_path)
 
-        await ctx.send("This dump will be deleted in 60 seconds.", delete_after=60)
-        await ctx.send(file=discord.File(file_path), delete_after=60)
+        if delete:
+            await ctx.send("This dump will be deleted in 60 seconds.", delete_after=60)
+            await ctx.send(file=discord.File(file_path), delete_after=60)
+        else:
+            await ctx.send(file=discord.File(file_path))
         os.remove(file_path)
         log.info(f"Dumped sign ups for {ctx.author}.")
 

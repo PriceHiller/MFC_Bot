@@ -47,10 +47,6 @@ class Bot(AutoShardedBot):
                  **options):
         super().__init__(command_prefix, **options)
 
-    # async def on_command_error(self, ctx: commands.Context, exception: commands.errors.CommandInvokeError):
-    #     if isinstance(exception, commands.MissingPermissions):
-    #         await ctx.send(f"{ctx.author.mention}, you lack the permissions to use this command!", delete_after=10)
-
     @staticmethod
     async def write(path, data: str):
         async with aiofiles.open(path, "w+", encoding="UTF-8") as f:

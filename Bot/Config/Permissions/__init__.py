@@ -1,9 +1,12 @@
 import json
+import logging
 
-from discord import Member
 from discord.ext import commands
 
 from Bot import config_path
+
+
+log = logging.getLogger(__name__)
 
 config_dict: dict = json.loads(open(config_path).read())
 
@@ -41,19 +44,26 @@ class Permissions:
              config_dict["MFC-Guild"]["Specific-User-Perm"].items()]
 
     @staticmethod
-    async def check_perms(ctx: commands.Context, command_name: str):
-        member = ctx.author
-        check_roles = [Permissions.admins, Permissions.moderators]
-        if ctx.guild:
-            for internal_role in check_roles:
-                for role in internal_role:
-                    for discord_role in member.roles:
-                        if role.id == discord_role.id and \
-                                ("*" in role.permitted_commands or command_name in role.permitted_commands):
-                            return True
-        for user in Permissions.users:
-            if user.id == member.id and \
-                    ("*" in user.permitted_commands or command_name in user.permitted_commands):
-                return True
-        await ctx.send(f"{ctx.author.mention}, you lack the permissions required to run this command!", delete_after=10)
-        return False
+    def is_permitted():
+        async def predicate(ctx: commands.Context):
+            command_name = str(ctx.command)
+            member = ctx.author
+            check_roles = [Permissions.admins, Permissions.moderators]
+            if ctx.guild:
+                for internal_role in check_roles:
+                    for role in internal_role:
+                        for discord_role in member.roles:
+                            if role.id == discord_role.id and \
+                                    ("*" in role.permitted_commands or command_name in role.permitted_commands):
+                                return True
+            for user in Permissions.users:
+                if user.id == member.id and \
+                        ("*" in user.permitted_commands or command_name in user.permitted_commands):
+                    log.info(
+                        f"{ctx.author} did passed the necessary permissions check to run the command \"{ctx.command}\"")
+                    return True
+            await ctx.send(f"{ctx.author.mention}, you lack the permissions required to run this command!",
+                           delete_after=10)
+            log.info(f"{ctx.author} did not pass the necessary permissions check to run the command \"{ctx.command}\"")
+            return False
+        return commands.check(predicate)

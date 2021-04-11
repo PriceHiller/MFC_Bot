@@ -2,6 +2,9 @@ import logging
 import os
 
 import yaml
+import aiofiles
+
+import orjson
 
 from logging import config
 from pathlib import Path
@@ -12,6 +15,7 @@ from aiohttp.client_exceptions import ClientConnectionError
 
 from discord import Embed
 from discord import Color
+from discord.ext import commands
 from discord.ext.commands import AutoShardedBot
 from discord.ext.commands import Context
 from discord import Intents
@@ -47,6 +51,16 @@ class Bot(AutoShardedBot):
     #     if isinstance(exception, commands.MissingPermissions):
     #         await ctx.send(f"{ctx.author.mention}, you lack the permissions to use this command!", delete_after=10)
 
+    @staticmethod
+    async def write(path, data: str):
+        async with aiofiles.open(path, "w+", encoding="UTF-8") as f:
+            await f.write(data)
+
+    @staticmethod
+    async def read(path) -> str:
+        async with aiofiles.open(path, encoding="UTF-8") as f:
+            return await f.read()
+
     def default_embed(self, **embed_kwargs):
         class DefaultEmbed(Embed):
 
@@ -63,6 +77,11 @@ class Bot(AutoShardedBot):
                          icon_url=self.user.avatar_url)
         return embed
 
+    async def on_command_error(self, ctx: commands.Context, exception: commands.errors.CommandInvokeError):
+        error = getattr(exception, "original", exception)
+        if isinstance(error, commands.errors.CheckFailure):
+            log.debug(f"Check function checking command {ctx.command} failed")
+
     async def on_command(self, ctx: Context):
         """
         Override the on_command function to log all command usages through the Bot
@@ -77,12 +96,12 @@ class Bot(AutoShardedBot):
                      f'\"{ctx.message.content}\" in DMs ({ctx.channel.id})')
 
     async def on_ready(self):
-        json_data = await APIRequest.post("/user/verify")
-        if json_data["status"] == 200:
+        response = await APIRequest.post("/user/verify")
+        if response.status == 200:
             log.info(f"Connected and authenticated with the API at: {APIRequest.api_url}")
         else:
             log.warning(f"Could not connect or unauthenticated with the API at: {APIRequest.api_url}, "
-                        f"status code: {json_data['status']}")
+                        f"status code: {response.status}")
         log.info(f"Logged in as {self.user} ({self.user.id})")
         log.info(f"Prefix is set to \"{self.command_prefix}\"")
         log.info(f"Have access to the following guilds: "
@@ -95,6 +114,12 @@ class APIRequest:
     api_token = os.getenv("API_TOKEN")
     headers = {"Authorization": "Bearer " + api_token}
 
+    class Response:
+
+        def __init__(self, json: dict, status: int):
+            self.json = json
+            self.status = status
+
     @staticmethod
     def verify_url(url: str, checks=("scheme", "netloc")):
         valid_url = parse.urlparse(url)
@@ -102,46 +127,40 @@ class APIRequest:
 
     @classmethod
     async def get(cls, endpoint: str = "/") -> [dict, int]:
-        fail_return_dict = {"status": 418}
         full_url = cls.api_url + endpoint
         if not cls.verify_url(full_url):
-            log.warning(f"URL {full_url} is not a valid url!")
-            return {"status": 418}
+            return cls.Response({}, 418)
         async with ClientSession(headers=cls.headers) as session:
             try:
                 log.debug(f"GET request issued to {full_url}")
                 async with session.get(full_url, ssl=False) as get_session:
-                    json_dict = await get_session.json()
-                    if not json_dict:
-                        json_dict = {}
-                    json_dict |= {"status": get_session.status}
-                    return json_dict
+                    json_dict = await get_session.json() or {}
+                    return cls.Response(json_dict, get_session.status)
             except ClientConnectionError as error:
                 log.warning(f"Could not connect to the API at url {cls.api_url}, error: {error}")
-                return fail_return_dict
+                return cls.Response({}, 400)
             except UnicodeError:
                 log.warning(f"Unicode error thrown due to URL, likely malformed, URL: {full_url}")
-                return fail_return_dict
+                return cls.Response({}, 400)
 
     @classmethod
     async def post(cls, endpoint: str = "/", data: dict = None) -> [dict, int]:
-        fail_return_dict = {"status": 418}
         full_url = cls.api_url + endpoint
         if not cls.verify_url(full_url):
             log.warning(f"URL {full_url} is not a valid url!")
-            return fail_return_dict
+            return cls.Response({}, 400)
         async with ClientSession(headers=cls.headers) as session:
             try:
                 log.debug(f"POST request issued to {full_url}")
-                async with session.post(full_url, data=data, ssl=False) as post_session:
-                    json_dict = await post_session.json()
-                    if not json_dict:
-                        json_dict = {}
-                    json_dict |= {"status": post_session.status}
-                    return json_dict
+                async with session.post(full_url, json=data, ssl=False) as post_session:
+                    json_dict = await post_session.json() or {}
+                    return cls.Response(json_dict, post_session.status)
             except UnicodeError:
                 log.warning(f"Unicode error thrown due to URL, likely malformed, URL: {full_url}")
-                return fail_return_dict
+                return cls.Response({}, 400)
+            except ClientConnectionError as error:
+                log.warning(f"Could not connect to the API at url {cls.api_url}, error: {error}")
+                return cls.Response({}, 400)
 
 
 def setup_logging() -> None:

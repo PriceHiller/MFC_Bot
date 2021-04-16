@@ -5,6 +5,7 @@ import discord
 from Bot import APIRequest
 from Bot.Cogs import BaseCog
 from Bot.Cogs import command
+from Bot.Cogs import listener
 from Bot.Config.Permissions import Permissions
 
 log = logging.getLogger(__name__)
@@ -39,7 +40,7 @@ class MatchPlanning(BaseCog):
         team_id = team_lookup.json["id"]
         player_lookup = await APIRequest.get(f"/player/discord-id?discord_id={player.id}")
         if player_lookup.status == 404:
-            await ctx.send(f"Could not find a player with discord id: `{player.id}`")
+            await ctx.send(f"Could not find the player {player.mention}`")
             return
         elif player_lookup.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
@@ -52,8 +53,55 @@ class MatchPlanning(BaseCog):
         elif add_player.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
             return
-        await ctx.send(f"Added player to team")
-        
+        await ctx.send(f"Added {player.mention} to {team.mention}")
+
+    @player.command(aliases=["r"])
+    @Permissions.is_permitted()
+    async def remove(self, ctx: command.Context, player: discord.Member, team: discord.Role):
+        """Removes a player from a team if they've been registered as a player previously."""
+        team_lookup = await APIRequest.get(f"/team/discord-id?discord_id={team.id}")
+        if team_lookup.status == 404:
+            await ctx.send(f"Could not find a team with discord id: `{team.id}`")
+            return
+        elif team_lookup.status != 200:
+            await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
+            return
+        team_id = team_lookup.json["id"]
+        player_lookup = await APIRequest.get(f"/player/discord-id?discord_id={player.id}")
+        if player_lookup.status == 404:
+            await ctx.send(f"Could not find the player {player.mention}`")
+            return
+        elif player_lookup.status != 200:
+            await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
+            return
+        player_id = player_lookup.json["id"]
+        add_player = await APIRequest.post(f"/team/remove-player-from-team?player_id={player_id}&team_id={team_id}")
+        if add_player.status == 403:
+            await ctx.send(f"Could not authenticate with the API")
+            return
+        elif add_player.status != 200:
+            await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
+            return
+        await ctx.send(f"Removed {player.mention} from {team.mention}")
+
+    @team.command(aliases=["n"])
+    @Permissions.is_permitted()
+    async def update(self, ctx: command.Context, team: discord.Role):
+        """Updates a team's name to the new role"""
+        team_lookup = await APIRequest.get(f"/team/discord-id?discord_id={team.id}")
+        if team_lookup.status == 404:
+            await ctx.send(f"Could not find a team with discord id: `{team.id}`")
+            return
+        elif team_lookup.status != 200:
+            await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
+            return
+        team_id = team_lookup.json["id"]
+        name_response = await APIRequest.post(f"/team/name?new_name={team.name}&team_id={team_id}")
+        if name_response.status != 200:
+            await ctx.send(f"Something has gone wrong with the API!")
+            return
+        else:
+            await ctx.send(f"Updated team name to `{team.name}`")
 
     @team.command(aliases=["c"])
     @Permissions.is_permitted()
@@ -102,3 +150,54 @@ class MatchPlanning(BaseCog):
             return
         await ctx.send(f"Deleted the team `{discord_team_role.name}`")
         log.info(f"{ctx.author} ({ctx.author.id}) deleted the team {discord_team_role.name}, API id: {team_id}")
+
+    @team.command(aliases=["e"])
+    @Permissions.is_permitted()
+    async def elo(self, ctx: command.Context, discord_team_role: discord.Role, elo: int):
+        response = await APIRequest.get(f"/team/discord-id?discord_id={discord_team_role.id}")
+        if response.status == 404:
+            await ctx.send(f"The team, {discord_team_role.name}, was not found!")
+            return
+        elif response.status != 200:
+            await ctx.send("Something went wrong on the API!")
+            return
+        team_id = response.json["id"]
+        elo_update = await APIRequest.post(f"/team/update-elo?new_elo={elo}&team_id={team_id}")
+        if elo_update.status == 403:
+            await ctx.send("Could not authenticate with the API!")
+            return
+        elif elo_update.status != 200:
+            await ctx.send("Something went wrong on the API!")
+            return
+        else:
+            await ctx.send(f"Updated {discord_team_role.name}'s elo to {elo}")
+            log.info(f"{ctx.author} ({ctx.author.id}) updated {team_id}'s ({discord_team_role.name}) elo to {elo}")
+            return
+
+    @listener()
+    async def on_guild_role_update(self, before: discord.Role, after: discord.Role):
+        if before.name != after.name:
+            team_lookup = await APIRequest.get(f"/team/discord-id?discord_id={after.id}")
+            if team_lookup.status == 404:
+                log.info(f"Could not find a team with discord id: \"{after.id}\"")
+                return
+            elif team_lookup.status != 200:
+                log.info(f"Unable to receive data from the API, something has gone wrong!")
+                return
+            team_id = team_lookup.json["id"]
+            name_response = await APIRequest.post(f"/team/name?new_name={after.name}&team_id={team_id}")
+            if name_response.status != 200:
+                log.info(f"Something has gone wrong with the API!")
+                return
+            else:
+                log.info(f"Updated team \"{team_id}\" name to \"{after.name}\"")
+
+    @listener()
+    async def on_guild_role_delete(self, role: discord.Role):
+        team_id = await APIRequest.get(f"/team/discord-id?discord_id={role.id}")
+        if team_id.status != 200:
+            return
+        team_id = team_id.json["id"]
+        response = await APIRequest.post(f"/team/delete?team_id={team_id}")
+        if response.status == 200:
+            log.info(f"Team \"{team_id}\" was deleted.")

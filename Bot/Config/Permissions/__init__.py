@@ -59,16 +59,6 @@ class Permissions:
                                     f"command \"{ctx.command}\""
                                 )
                                 return True
-            # for role in Permissions.custom_roles:
-            #     if role.id in member.roles and \
-            #             ("*" in role.permitted_commands or command_name in role.permitted_commands):
-            #         log.info(
-            #             f"{ctx.author} did passed the necessary permissions check to run the command \"{ctx.command}\"")
-            #         return True
-            await ctx.send(f"{ctx.author.mention}, you lack the permissions required to run this command!",
-                           delete_after=10)
-            log.info(f"{ctx.author} ({ctx.author.id}) did not pass the necessary permissions check to run the command "
-                     f"\"{ctx.command}\"")
             return False
 
         return commands.check(predicate)

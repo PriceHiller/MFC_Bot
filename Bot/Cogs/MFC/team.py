@@ -11,7 +11,7 @@ from Bot.Config.Permissions import Permissions
 log = logging.getLogger(__name__)
 
 
-class MatchPlanning(BaseCog):
+class Team(BaseCog):
 
     @command.group(aliases=["t"])
     @Permissions.is_permitted()

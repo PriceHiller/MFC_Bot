@@ -14,7 +14,6 @@ log = logging.getLogger(__name__)
 class Team(BaseCog):
 
     @command.group(aliases=["t"])
-    @Permissions.is_permitted()
     async def team(self, ctx: command.Context):
         """A group containing all MFC team related commands"""
 

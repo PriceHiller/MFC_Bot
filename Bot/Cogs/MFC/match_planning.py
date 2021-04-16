@@ -29,8 +29,7 @@ class MatchPlanning(BaseCog):
         bot.loop.create_task(self.plan_loop(), name=self.plan_loop_name)
         super().__init__(bot)
 
-    @command.group(aliases=["p"])
-    @Permissions.is_permitted()
+    @command.group(aliases=["pl"])
     async def plan(self, ctx: command.Context):
         """Posts the match planning sign ups if no subcommand is invoked"""
         if not ctx.invoked_subcommand:
@@ -41,20 +40,22 @@ class MatchPlanning(BaseCog):
             if task.get_name() == self.plan_loop_name:
                 task.cancel()
 
-    @tasks.loop(hours=1)
     async def plan_loop(self):
-        await self.bot.wait_until_ready()
-        today = datetime.now(tz=timezone.utc).strftime("%A").casefold()
-        if today == bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Post-Day"].casefold():
-            if not self.planning_posted:
-                await self.post_match_planning()
-                self.planning_posted = True
-                bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = True
+        while True:
+            log.debug(f"Checking if planning should be posted.")
+            await self.bot.wait_until_ready()
+            today = datetime.now(tz=timezone.utc).strftime("%A").casefold()
+            if today == bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Post-Day"].casefold():
+                if not self.planning_posted:
+                    await self.post_match_planning()
+                    self.planning_posted = True
+                    bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = True
+                    await bot_config.write(bot_config.config_dict)
+            elif self.planning_posted:
+                self.planning_posted = False
+                bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = False
                 await bot_config.write(bot_config.config_dict)
-        elif self.planning_posted:
-            self.planning_posted = False
-            bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = False
-            await bot_config.write(bot_config.config_dict)
+            await asyncio.sleep(3600) # Sleep for one hour
 
     @plan.command()
     @Permissions.is_permitted()

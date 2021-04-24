@@ -40,22 +40,26 @@ class MatchPlanning(BaseCog):
             if task.get_name() == self.plan_loop_name:
                 task.cancel()
 
+    @tasks.loop(seconds=10)
     async def plan_loop(self):
         while True:
+            await asyncio.sleep(600)  # sleep for 10 minutes
             log.debug(f"Checking if planning should be posted.")
             await self.bot.wait_until_ready()
             today = datetime.now(tz=timezone.utc).strftime("%A").casefold()
             if today == bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Post-Day"].casefold():
                 if not self.planning_posted:
-                    await self.post_match_planning()
-                    self.planning_posted = True
-                    bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = True
-                    await bot_config.write(bot_config.config_dict)
+                    result = await self.post_match_planning()
+                    if result:
+                        self.planning_posted = True
+                        bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = True
+                        await bot_config.write(bot_config.config_dict)
+                    else:
+                        log.info(f"Match planning could not be fully posted")
             elif self.planning_posted:
                 self.planning_posted = False
                 bot_config.config_dict["MFC-Guild"]["Match-Planning"]["Posted"] = False
                 await bot_config.write(bot_config.config_dict)
-            await asyncio.sleep(3600) # Sleep for one hour
 
     @plan.command()
     @Permissions.is_permitted()
@@ -177,6 +181,7 @@ class MatchPlanning(BaseCog):
                 [react_message.id for react_message in react_messages]
 
             await bot_config.write(bot_config.config_dict)
+            return True
 
         else:
             log.critical(f"The Channel-ID for Match-Planning is invalid!")

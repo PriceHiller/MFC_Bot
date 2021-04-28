@@ -18,14 +18,18 @@
             "Commands": [],
             "Ids": []
         },
-        "Custom-Role-Perm": {},
+        "Custom-Role-Perm": {
+            "727651765100609577": [
+                "team elo"
+            ]
+        },
         "Prefix": "-",
         "Id": 797088210928009246,
         "Match-Planning": {
             "Ping-Role": 727651765100609577,
             "Channel-ID": 727651164794912889,
             "Post-Day": "Saturday",
-            "Posted": true,
+            "Posted": false,
             "Timezone": "EST",
             "Message-IDs": [
                 835625871779430471,

@@ -63,7 +63,6 @@ class Bot(AutoShardedBot):
             def __init__(self, **kwargs):
                 color_rgb = bot_config.config_dict["Embed-Color"]
                 super().__init__(color=Color.from_rgb(r=color_rgb["r"], g=color_rgb["g"], b=color_rgb["b"]),
-
                                  **kwargs)
 
         embed = DefaultEmbed(**embed_kwargs)
@@ -71,6 +70,8 @@ class Bot(AutoShardedBot):
         embed.set_author(name=self.user.display_name,
                          url=os.getenv("API_URL", default="https://www.discord.com"),
                          icon_url=self.user.avatar_url)
+        embed.set_thumbnail(url=self.user.avatar_url)
+        embed.set_footer(text=f"Written by Sbinalla (Price Hiller)", icon_url=self.user.avatar_url)
         return embed
 
     async def on_command_error(self, ctx: commands.Context, exception: commands.errors.CommandInvokeError):
@@ -82,10 +83,18 @@ class Bot(AutoShardedBot):
             split_exception = str(exception).split(" ")
             await ctx.send("`" + split_exception[0] + "` " + " ".join(split_exception[1:]).strip(".")
                            + f" for the command: `{ctx.command}`. See `{ctx.prefix}help {ctx.command}`.")
+        elif isinstance(error, commands.errors.MemberNotFound):
+            exception = str(exception).replace('"', '`')
+            await ctx.send(f"{exception}")
+        elif isinstance(error, commands.errors.CommandNotFound):
+            exception = str(exception).replace('"', '`')
+            await ctx.send(f"{exception}\n"
+                           f"Please see `{self.command_prefix}help`")
         else:
             try:
                 raise exception
             except Exception:
+                await ctx.send("`An Error Occurred`")
                 log.exception("Re-raised a caught exception for log")
 
     async def on_command(self, ctx: Context):

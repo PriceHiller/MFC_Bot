@@ -52,6 +52,7 @@ class Team(BaseCog):
         elif add_player.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
             return
+        await player.add_roles(team)
         await ctx.send(f"Added {player.mention} to {team.mention}")
 
     @player.command(aliases=["r"])
@@ -64,23 +65,35 @@ class Team(BaseCog):
             return
         elif team_lookup.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
+            log.error(f"Unable to retrieve data from the API, status: \"{team_lookup.status}\", "
+                      f"json: \"{team_lookup.json}\"")
             return
-        team_id = team_lookup.json["id"]
         player_lookup = await APIRequest.get(f"/player/discord-id?discord_id={player.id}")
         if player_lookup.status == 404:
             await ctx.send(f"Could not find the player {player.mention}`")
             return
         elif player_lookup.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
+            log.error(f"Unable to retrieve data from the API, status: \"{player_lookup.status}\", "
+                      f"json: \"{player_lookup.json}\"")
             return
+        team_id = team_lookup.json["id"]
         player_id = player_lookup.json["id"]
+
+        if not player_lookup.json["team_id"] == team_id:
+            await ctx.send(f"{player.mention} is not on the team {team.mention}")
+            return
+        print(player_lookup.json, team_lookup.json)
         add_player = await APIRequest.post(f"/team/remove-player-from-team?player_id={player_id}&team_id={team_id}")
         if add_player.status == 403:
             await ctx.send(f"Could not authenticate with the API")
             return
         elif add_player.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
+            log.error(f"Unable to retrieve data from the API, status: \"{add_player.status}\", "
+                      f"json: \"{add_player.json}\"")
             return
+        await player.remove_roles(team)
         await ctx.send(f"Removed {player.mention} from {team.mention}")
 
     @team.command(aliases=["n"])

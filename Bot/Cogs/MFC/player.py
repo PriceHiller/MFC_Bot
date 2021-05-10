@@ -211,7 +211,10 @@ class Player(BaseCog):
         send_embeds: list[discord.Embed] = []
         for ranking, players in player_field_data.items():
             for player in players:
-                if (len(names_field) + (len(players))) > 1000:
+                if (len(names_field) + (len(players))) > 900:
+                    ranking_field += "\n"
+                    names_field += "\n"
+                    data_field += "\n"
                     send_embeds.append(generic_embed(ranking_field, names_field, data_field))
                     ranking_field = ""
                     names_field = ""

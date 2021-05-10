@@ -51,6 +51,16 @@ class Team(BaseCog):
         elif player_lookup.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")
             return
+        if player_team_id := player_lookup.json["team_id"]:
+            resp = await APIRequest.get(f"/team/id?id={player_team_id}")
+            if resp.status != 200:
+                await ctx.send(f"Could not exchange data with the API. Something has gone wrong!")
+                log.error(f"Could not get data from the API, status: {resp.status}, json: {resp.json}")
+                return
+            team_name = resp.json["team_name"]
+            await ctx.send(f"{player.mention} is already on a team `{team_name}`. They will have to be removed from "
+                           f"that team before being added to a new team.")
+            return
         player_id = player_lookup.json["id"]
         add_player = await APIRequest.post(f"/team/add-player-to-team?player_id={player_id}&team_id={team_id}")
         if add_player.status == 403:
@@ -90,7 +100,6 @@ class Team(BaseCog):
         if not player_lookup.json["team_id"] == team_id:
             await ctx.send(f"{player.mention} is not on the team {team.mention}")
             return
-        print(player_lookup.json, team_lookup.json)
         add_player = await APIRequest.post(f"/team/remove-player-from-team?player_id={player_id}&team_id={team_id}")
         if add_player.status == 403:
             await ctx.send(f"Could not authenticate with the API")
@@ -141,32 +150,47 @@ class Team(BaseCog):
                             f"for id {team['discord_id']} was not found!")
 
         total_teams = len(team_lookup.json)
-        embed = self.bot.default_embed(title="MFC Teams",
-                                       description=f"All teams registered in MFC by ELO.\n\n"
-                                                   f"Total Teams: `{total_teams}`")
+
+        def get_team_embed(team_pos_text, team_name_text, elo_text):
+            embed = self.bot.default_embed(title="MFC Teams",
+                                           description=f"All teams registered in MFC by ELO.\n\n"
+                                                       f"Total Teams: `{total_teams}`")
+            embed.add_field(name="Ranking", value=team_pos_text)
+            embed.add_field(name="Teams", value=team_name_text)
+            embed.add_field(name="Elo", value=elo_text)
+            return embed
+
         team_position_field_text = ""
         team_name_field_text = ""
         team_elo_text = ""
+
+        embeds = []
+
         # This will give us all teams by elo in an ascending manner by elo
-        for team_count, elo in enumerate(reversed(sorted(unsorted_teams))):
-            team_count += 1
+        team_count = 0
+        for elo in reversed(sorted(unsorted_teams)):
             teams = unsorted_teams[elo]
-            if len(teams) == 1:
-                team_position_field_text += f"{team_count}\n"
-                team_name_field_text += str(teams[0]) + "\n"
+            team_count += 1
+            for team in teams:
+                if len(team_name_field_text + str(teams[0]) + "\n") > 900:
+                    team_position_field_text += "\n"
+                    team_name_field_text += "\n"
+                    team_elo_text += "\n"
+                    embeds.append(get_team_embed(team_position_field_text, team_name_field_text, team_elo_text))
+                    team_position_field_text = ""
+                    team_name_field_text = ""
+                    team_elo_text = ""
+                if len(teams) > 1:
+                    team_position_field_text += f"{team_count}T.)\n"
+                else:
+                    team_position_field_text += f"{team_count}.)\n"
+                team_name_field_text += str(team) + "\n"
                 team_elo_text += str(elo) + "\n"
-            else:
-                for team in teams:
-                    print(team)
-                    team_position_field_text += f"{team_count}T\n"
-                    team_name_field_text += str(team) + "\n"
-                    team_elo_text += str(elo) + "\n"
 
-        embed.add_field(name="Position", value=team_position_field_text)
-        embed.add_field(name="Teams", value=team_name_field_text)
-        embed.add_field(name="Elo", value=team_elo_text)
-
-        await channel.send(embed=embed)
+        if team_position_field_text and team_name_field_text and team_elo_text:
+            embeds.append(get_team_embed(team_position_field_text, team_name_field_text, team_elo_text))
+        for embed in embeds:
+            await channel.send(embed=embed)
         return True
 
     @team.command(aliases=["l"])

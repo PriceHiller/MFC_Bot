@@ -90,6 +90,9 @@ class Bot(AutoShardedBot):
             exception = str(exception).replace('"', '`')
             await ctx.send(f"{exception}\n"
                            f"Please see `{self.command_prefix}help`")
+        elif isinstance(error, commands.errors.RoleNotFound):
+            await ctx.send(f"{exception}\n"
+                           f"Perhaps you are in the wrong server?")
         else:
             try:
                 raise exception

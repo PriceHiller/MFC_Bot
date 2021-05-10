@@ -1,8 +1,10 @@
+import asyncio
 import logging
 
 import discord
+from discord.ext import tasks
 
-from Bot import APIRequest
+from Bot import APIRequest, bot_config
 from Bot.Cogs import BaseCog
 from Bot.Cogs import command
 from Bot.Cogs import listener
@@ -12,6 +14,11 @@ log = logging.getLogger(__name__)
 
 
 class Team(BaseCog):
+    embed_loop_team_json = {}
+
+    def __init__(self, bot):
+        bot.loop.create_task(self.embed_teams_loop(), name="embed_team_loop")
+        super().__init__(bot)
 
     @command.group(aliases=["t"])
     async def team(self, ctx: command.Context):
@@ -95,6 +102,84 @@ class Team(BaseCog):
             return
         await player.remove_roles(team)
         await ctx.send(f"Removed {player.mention} from {team.mention}")
+
+    @tasks.loop(seconds=600)
+    async def embed_teams_loop(self):
+        while True:
+            await asyncio.sleep(600)  # sleep for 10 minutes
+            text_channel_id = bot_config.config_dict["MFC-Guild"]["Automated-ELO-Output"]["Channel-ID"]
+            channel: discord.TextChannel = self.bot.get_channel(int(text_channel_id))
+            if not channel or type(channel) is not discord.TextChannel:
+                log.error(f"Incorrect channel ID passed for Automated-ELO-Output")
+            else:
+                await channel.purge()
+                await self.embed_teams(channel)
+
+    async def embed_teams(self, channel: discord.TextChannel):
+        guild: discord.Guild = channel.guild
+        team_lookup = await APIRequest.get(f"/team/all")
+        if team_lookup.status != 200:
+            log.error((f"Could not list teams, status: \"{team_lookup.status}\", json: \"{team_lookup.json}\""))
+            return False
+        unsorted_teams: [int, list[str]] = {}
+        self.embed_loop_team_json = team_lookup.json
+        for team in team_lookup.json:
+            team: dict
+            discord_id = team["discord_id"]
+            role = guild.get_role(int(discord_id))
+            if not role:
+                role = await guild.fetch_roles()
+            if role:
+                role: discord.Role
+                elo = int(team["elo"])
+                if not unsorted_teams.get(elo, None):
+                    unsorted_teams[elo] = [role.mention]
+                else:
+                    unsorted_teams[elo].append(role.mention)
+            else:
+                log.warning(f"Attempted to get team {team['team_name']}, id: {team['id']}, but they their discord role"
+                            f"for id {team['discord_id']} was not found!")
+
+        total_teams = len(team_lookup.json)
+        embed = self.bot.default_embed(title="MFC Teams",
+                                       description=f"All teams registered in MFC by ELO.\n\n"
+                                                   f"Total Teams: `{total_teams}`")
+        team_position_field_text = ""
+        team_name_field_text = ""
+        team_elo_text = ""
+        # This will give us all teams by elo in an ascending manner by elo
+        for team_count, elo in enumerate(reversed(sorted(unsorted_teams))):
+            team_count += 1
+            teams = unsorted_teams[elo]
+            if len(teams) == 1:
+                team_position_field_text += f"{team_count}\n"
+                team_name_field_text += str(teams[0]) + "\n"
+                team_elo_text += str(elo) + "\n"
+            else:
+                for team in teams:
+                    print(team)
+                    team_position_field_text += f"{team_count}T\n"
+                    team_name_field_text += str(team) + "\n"
+                    team_elo_text += str(elo) + "\n"
+
+        embed.add_field(name="Position", value=team_position_field_text)
+        embed.add_field(name="Teams", value=team_name_field_text)
+        embed.add_field(name="Elo", value=team_elo_text)
+
+        await channel.send(embed=embed)
+        return True
+
+    @team.command(aliases=["l"])
+    @Permissions.is_permitted()
+    async def list(self, ctx: command.Context):
+        """Lists all teams"""
+        if ctx.channel is discord.DMChannel:
+            await ctx.send(f"This command must be invoked in a discord server!")
+            return f"This command must be invoked in a discord server!"
+
+        content = await self.embed_teams(ctx.channel)  # Should raise an error instead of sending back bools, SHIT code
+        if not content:
+            await ctx.send(f"Could not find teams, something has gone wrong!")
 
     @team.command(aliases=["n"])
     @Permissions.is_permitted()

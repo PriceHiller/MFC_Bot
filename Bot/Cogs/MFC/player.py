@@ -1,11 +1,13 @@
 import logging
 
+from datetime import datetime
+from datetime import timedelta
+
 import discord
 
 from Bot import APIRequest
 from Bot.Cogs import BaseCog
 from Bot.Cogs import command
-from Bot.Cogs import listener
 from Bot.Config.Permissions import Permissions
 
 log = logging.getLogger(__name__)
@@ -13,6 +15,8 @@ log = logging.getLogger(__name__)
 
 class Player(BaseCog):
     base_endpoint = "/player"
+
+    cached_match_stats = {}
 
     async def lookup_player_discord_id(self, discord_id: int):
         response = await APIRequest.get(self.base_endpoint + f"/discord-id?discord_id={discord_id}")
@@ -36,7 +40,6 @@ class Player(BaseCog):
 
     @player.command(aliases=["r"])
     async def register(self, ctx: command.Context, playfab_id: str):
-
         player = await self.lookup_player_playfab_id(playfab_id)
         member = ctx.author
         if await self.lookup_player_discord_id(member.id):
@@ -86,97 +89,147 @@ class Player(BaseCog):
                     f"Successfully assigned {member.display_name} to playfab id `{playfab_id}`")
                 return
 
-    async def calculate_player_data(self, player_data: list[dict]) -> dict:
+    async def calculate_player_data(self, matches: list[dict]) -> dict:
 
-        """Calculates a list of API data like so:
-
-        >>> [
-        >>>      {
-        >>>       "generated": "2021-05-05T19:54:01.308780+00:00",
-        >>>       "message": null,
-        >>>       "extra": null,
-        >>>       "id": "eda931e5-b6f1-4ab2-8a58-4ab0b5c13371",
-        >>>       "creation": "2021-05-05T19:46:54.222752+00:00",
-        >>>       "modification": null,
-        >>>       "team_id": "f25858f8-f738-4f11-be6a-01ccfb950b62",
-        >>>       "team_number": 0,
-        >>>       "round_id": "6c01d508-fd3f-43ca-86c4-f34b9fe576b0",
-        >>>       "player_id": "4ed7ed5e-3a31-4a7b-a3b5-64ac4f46b108",
-        >>>       "score": 39,
-        >>>       "kills": 0,
-        >>>       "deaths": 1,
-        >>>       "assists": 2,
-        >>>       "set_id": "4aece975-4ee9-4d91-bcb3-419bef2049bf",
-        >>>       "match_id": "9324780a-a689-4d04-8cf8-8fb48bb029ac"
-        >>>     }
-        >>> ]
-        """
-        calculated_data = {
-            "total-kills": 0,
-            "total-deaths": 0,
-            "total-assists": 0,
-            "total-points": 0,
-            "total-kda-r": 0,
-            "total-kd": 0,
-            "match-data": {}
-        }
-
-        match_rounds = {}
-        for data in player_data:
-            if not match_rounds.get(data["match_id"], None):
-                match_rounds[data["match_id"]] = {}
-                match = await APIRequest.get(f"/match/id?id={data['match_id']}")
-                if match.status == 200:
-                    team1_id = match.json["team1_id"]
-                    team2_id = match.json["team2_id"]
-
-                    async def get_team(team_id):
-                        resp = await APIRequest.get(f"/team/id?id={team_id}")
-                        if resp.status == 200:
-                            return resp.json["team_name"]
+        players = {}
+        for match in matches:
+            for set in match["sets"]:
+                for _round in set["rounds"]:
+                    team1_list: list = _round["team1_players"] or []
+                    team2_list: list = _round["team1_players"] or []
+                    team1_list.extend(team2_list)
+                    combined = team1_list
+                    for player in combined:
+                        if not players.get(player["player_id"], None):
+                            players[player["player_id"]] = {
+                                "score": 0,
+                                "kills": 0,
+                                "assists": 0,
+                                "deaths": 0
+                            }
+                        player_dict = players[player["player_id"]]
+                        player_dict["score"] += player["score"]
+                        player_dict["kills"] += player["kills"]
+                        player_dict["assists"] += player["assists"]
+                        player_dict["deaths"] += player["deaths"]
+                        kills = player_dict["kills"]
+                        assists = player_dict["assists"]
+                        deaths = player_dict["deaths"]
+                        if deaths == 0:
+                            player_dict["kda-r"] = 99999
+                            player_dict["kd"] = 99999
                         else:
-                            return None
+                            player_dict["kda"] = round((kills + assists) / deaths, 2)  # ???
+                            player_dict["kd"] = round(kills / deaths, 2)  # ??? very strange int warning... idgaf
 
-                    match_rounds[data["match_id"]]["team_1"] = await get_team(team1_id)
-                    match_rounds[data["match_id"]]["team_2"] = await get_team(team2_id)
+        return players
 
-            if not match_rounds[data["match_id"]].get(data["set_id"], None):
-                match_rounds[data["match_id"]] |= {data["set_id"]: {}}
-            calculated_data["total-kills"] += data["kills"]
-            calculated_data["total-assists"] += data["assists"]
-            calculated_data["total-deaths"] += data["deaths"]
-            calculated_data["total-points"] += data["score"]
-            if data["deaths"] > 0:
-                kda_r = round((data["kills"] + data["assists"]) / data["deaths"], 2)
-                kd = round(data["kills"] / data["deaths"], 2)
-            else:
-                kda_r = "Infinite"
-                kd = "Infinite"
-            round_data = {
-                "kills": data["kills"],
-                "deaths": data["deaths"],
-                "assists": data["assists"],
-                "score": data["score"],
-                "kda-r": kda_r,
-                "kd": kd
-            }
+    @player.command(aliases=["t"], name="top")
+    async def top_of_time_range(self, ctx: command.Context, time_range: str, top_of_type: str, amount: int):
+        """Gets the top 10 players of each time range and type and how many players stats to list out (amount)"""
+        current_time = datetime.utcnow()
+        time_ranges = {
+            "day": lambda: current_time - timedelta(days=1),
+            "week": lambda: current_time - timedelta(days=7),
+            "month": lambda: current_time - timedelta(days=30),
+            "all": "NO ACTION"
+        }
+        time_range = time_range.casefold().strip()
+        if not time_ranges.get(time_range, None):
+            await ctx.send(f"The time range argument MUST be one of the following: "
+                           f"{', '.join(range.capitalize() for range in time_ranges.keys())}")
+            return
 
-            match_rounds[data["match_id"]][data["set_id"]] |= {data["round_id"]: round_data}
-
-        calculated_data["match-data"] = match_rounds
-        if calculated_data["total-deaths"] > 0:
-            calculated_data["total-kda-r"] = \
-                round((calculated_data["total-kills"] + calculated_data["total-assists"])
-                      / calculated_data["total-deaths"], 2)
-            calculated_data["total-kd"] = \
-                round(calculated_data["total-kills"] / calculated_data["total-deaths"], 2)
+        top_of_types = ("kd", "kda", "score", "kills", "deaths", "assists")
+        top_of_type = top_of_type.strip().casefold()
+        if not top_of_type in top_of_types:
+            await ctx.send(f"The top of type argument MUST be one of the following: "
+                           f"{', '.join(top_type.capitalize() for top_type in top_of_types)}")
+            return
+        start_time = current_time
+        if time_range != "all":
+            end_time = time_ranges.get(time_range)()
+            match_data = await APIRequest.get(f"/match/all?start_time={start_time}?end_time={end_time}")
         else:
-            calculated_data["total-kda-r"] = "Infinite"
-            calculated_data["total-kd"] = "Infinite"
-        return calculated_data
+            match_data = await APIRequest.get(f"/match/all")
+        if match_data.status != 200:
+            await ctx.send(f"Could not get data from the API, something has gone wrong!")
+            log.error(f"Could not reach the API, status: {match_data.status}, json: {match_data.json}")
+            return
+
+        player_data = await self.calculate_player_data(match_data.json)
+        top_of_key_embeds = await self.top_of_key(ctx.guild, stats=player_data, key_name=top_of_type, amount=amount)
+        for embed in top_of_key_embeds:
+            await ctx.send(embed=embed)
+
+    async def top_of_key(self, guild: discord.Guild, stats: dict, key_name: str, amount: int = 10) -> \
+        list[discord.Embed]:
+
+        player_field_data: dict[int: list[list[str, str]]] = {}
+
+        players_added = 0
+        # Could use enumerate instead of tracking above
+        for player_api_data in reversed(sorted(stats.items(), key=lambda stat: stat[1][key_name])):
+            if players_added == amount:
+                break
+            api_id = player_api_data[0]
+            data = player_api_data[-1]
+            api_player = await APIRequest.get(f"/player/id?id={api_id}")
+            if api_player.status != 200:
+                continue
+            player_discord_id = api_player.json["discord_id"]
+            if not player_discord_id:
+                player_name = '`' + str(api_player.json["player_name"][:10]) + '`'
+            else:
+                discord_player = guild.get_member(player_discord_id)
+                if not discord_player:
+                    discord_player = await guild.fetch_member(int(player_discord_id))
+                    if not discord_player:
+                        discord_player = '`' + str(api_player.json["player_name"][:10]) + '`'
+                    else:
+                        discord_player = discord_player.mention
+                else:
+                    discord_player = discord_player.mention
+                player_name = discord_player
+            players_added += 1
+            if not player_field_data.get(players_added, None):
+                player_field_data[players_added] = []
+            player_field_data[players_added].append([player_name, data[key_name]])
+
+        def generic_embed(player_field_position, player_field_names, player_field_data):
+            embed = self.bot.default_embed(title=f"{key_name.capitalize()} Statistics",
+                                       description=f"{key_name.capitalize()} rankings for the top `{amount}` "
+                                                   f"players")
+            embed.add_field(name="Ranking", value=player_field_position)
+            embed.add_field(name="Name", value=player_field_names)
+            embed.add_field(name=key_name.capitalize(), value=player_field_data)
+            return embed
+
+        ranking_field = ""
+        names_field = ""
+        data_field = ""
+        send_embeds: list[discord.Embed] = []
+        for ranking, players in player_field_data.items():
+            for player in players:
+                if (len(names_field) + (len(players))) > 1000:
+                    send_embeds.append(generic_embed(ranking_field, names_field, data_field))
+                    ranking_field = ""
+                    names_field = ""
+                    data_field = ""
+                ranking_field += f"{ranking}.)\n"
+                names_field += f"{player[0]}\n"
+                data_field += f"{player[1]}\n"
+
+        if ranking_field and names_field and data_field:
+            send_embeds.append(generic_embed(ranking_field, names_field, data_field))
+
+        if not send_embeds:
+            return [self.bot.default_embed(title=f"Could not find data in that range.")]
+        return send_embeds
 
     @player.command(aliases=["s"], name="stats")
     async def get_player_stats(self, ctx: command.Context, member: discord.Member):
+        """Gets stats for a single player"""
         player_lookup = await APIRequest.get(f"/player/discord-id?discord_id={member.id}")
         if player_lookup.status == 404:
             await ctx.send(f"Could not find the player {member.mention}")

@@ -242,8 +242,8 @@ class Player(BaseCog):
             log.error(f"Unable to retrieve data from the API, status: \"{player_lookup.status}\", "
                       f"json: \"{player_lookup.json}\"")
             return
-        player_rounds = await APIRequest.get(f"/round/rounds-played-by-player-id?round_player_id="
-                                             f"{player_lookup.json['id']}")
+        player_id = player_lookup.json["id"]
+        player_rounds = await APIRequest.get(f"/match/all")
         if player_rounds.status != 200:
             if player_rounds.status == 404:
                 await ctx.send(f"Was unable to find rounds for that player...")
@@ -253,6 +253,10 @@ class Player(BaseCog):
                       f"json: \"{player_lookup.json}\"")
         else:
             stats_calculated = await self.calculate_player_data(player_rounds.json)
+            stats_calculated = stats_calculated.get(player_id, None)
+            if not stats_calculated:
+                await ctx.send("Was unable to fetch data for that member...")
+                return
             stats_embed = self.bot.default_embed(
                 author=self.bot.user,
                 title=f"User stats for `{member.nick}`",
@@ -263,14 +267,14 @@ class Player(BaseCog):
                             **API ID:** `{player_lookup.json["id"]}`
 
                             __Stats__
-                            **Score:** `{stats_calculated['total-points']}`
-                            **Kills:** `{stats_calculated['total-kills']}`
-                            **Assists:** `{stats_calculated['total-assists']}`
-                            **Deaths:** `{stats_calculated['total-deaths']}`
+                            **Score:** `{stats_calculated['score']}`
+                            **Kills:** `{stats_calculated['kills']}`
+                            **Assists:** `{stats_calculated['assists']}`
+                            **Deaths:** `{stats_calculated['deaths']}`
 
                             __Ratios__
-                            **KD/R:** `{stats_calculated['total-kd']}`
-                            **KDA/R:** `{stats_calculated['total-kda-r']}`
+                            **KD/R:** `{stats_calculated['kd']}`
+                            **KDA/R:** `{stats_calculated['kda']}`
                             """,
             )
             await ctx.send(embed=stats_embed)

@@ -32,6 +32,49 @@ class Team(BaseCog):
             await ctx.send(f"This command can only be used within a discord server.")
             return
 
+    @player.command(aliases=["l"], name="list")
+    async def list_players(self, ctx: command.Context, team: discord.Role):
+        """
+       >>> {
+       >>>  "generated": "2021-05-10T10:37:38.756392+00:00",
+       >>>  "message": null,
+       >>>  "extra": null,
+       >>>  "id": "baa8217e-d779-4ebf-8e23-b50af4ed2a93",
+       >>>  "creation": "2021-05-05T17:06:39.705922+00:00",
+       >>>  "modification": "2021-05-10T09:36:07.192646+00:00",
+       >>>  "player_name": "20?? Sbinalla",
+       >>>  "playfab_id": "5E92E0B55E90869C",
+       >>>  "discord_id": 172503043818913800,
+       >>>  "team_id": "f25858f8-f738-4f11-be6a-01ccfb950b62",
+       >>>  "ambassador": null
+       >>> }
+
+       Goes through a list of data above from a players key on team
+        """
+        team_lookup = await APIRequest.get(f"/team/discord-id?discord_id={team.id}")
+        if team_lookup.status == 404:
+            await ctx.send(f"Could not find that team!")
+            return
+
+        players_text_field = ""
+        for player in team_lookup.json["players"]:
+            player_discord_id = int(player["discord_id"])
+            if not player_discord_id:
+                player_name = '`' + str(player["player_name"]) + '`'
+            else:
+                guild: discord.Guild = ctx.guild
+                member = guild.get_member(player_discord_id)
+                if member:
+                    player_name = member.mention
+                else:
+                    player_name = '`' + str(player["player_name"]) + '`'
+            players_text_field += f"{player_name}\n"
+
+        embed = self.bot.default_embed(title=f"{team.name} Roster",
+                                       description=f"Full list of players that are on {team.mention}")
+        embed.add_field(name="Players", value=players_text_field)
+        await ctx.send(embed=embed)
+
     @player.command(aliases=["a"])
     @Permissions.is_permitted()
     async def add(self, ctx: command.Context, player: discord.Member, team: discord.Role):
@@ -46,7 +89,7 @@ class Team(BaseCog):
         team_id = team_lookup.json["id"]
         player_lookup = await APIRequest.get(f"/player/discord-id?discord_id={player.id}")
         if player_lookup.status == 404:
-            await ctx.send(f"Could not find the player {player.mention}`")
+            await ctx.send(f"Could not find the player {player.mention}")
             return
         elif player_lookup.status != 200:
             await ctx.send(f"Unable to receive data from the API, something has gone wrong!")

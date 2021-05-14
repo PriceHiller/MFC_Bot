@@ -125,7 +125,7 @@ class Player(BaseCog):
         return players
 
     @player.command(aliases=["t"], name="top")
-    async def top_of_time_range(self, ctx: command.Context, time_range: str, top_of_type: str, amount: int):
+    async def top_of_time_range(self, ctx: command.Context, time_range: str, top_of_type: str, amount: int = 10):
         """Gets the top 10 players of each time range and type and how many players stats to list out (amount)"""
         current_time = datetime.utcnow()
         time_ranges = {
@@ -163,7 +163,7 @@ class Player(BaseCog):
             await ctx.send(embed=embed)
 
     async def top_of_key(self, guild: discord.Guild, stats: dict, key_name: str, amount: int = 10) -> \
-        list[discord.Embed]:
+            list[discord.Embed]:
 
         player_field_data: dict[int: list[list[str, str]]] = {}
 
@@ -179,7 +179,7 @@ class Player(BaseCog):
                 continue
             player_discord_id = api_player.json["discord_id"]
             if not player_discord_id:
-                player_name = '`' + str(api_player.json["player_name"][:10]) + '`'
+                player_name = str(api_player.json["player_name"][:10])
             else:
                 discord_player = guild.get_member(player_discord_id)
                 if not discord_player:
@@ -196,13 +196,16 @@ class Player(BaseCog):
                 player_field_data[players_added] = []
             player_field_data[players_added].append([player_name, data[key_name]])
 
-        def generic_embed(player_field_position, player_field_names, player_field_data):
+        def generic_embed(player_position, player_names, player_data):
+            description =f"{key_name.capitalize()} rankings for the top `{amount}` players\n\n"
             embed = self.bot.default_embed(title=f"{key_name.capitalize()} Statistics",
-                                       description=f"{key_name.capitalize()} rankings for the top `{amount}` "
-                                                   f"players")
-            embed.add_field(name="Ranking", value=player_field_position)
-            embed.add_field(name="Name", value=player_field_names)
-            embed.add_field(name=key_name.capitalize(), value=player_field_data)
+                                           description=description)
+            player_position += "\n"
+            player_names += "\n"
+            player_data += "\n"
+            embed.add_field(name="Ranking", value=player_position)
+            embed.add_field(name="Name", value=player_names)
+            embed.add_field(name=key_name.capitalize(), value=player_data)
             return embed
 
         ranking_field = ""
@@ -211,16 +214,13 @@ class Player(BaseCog):
         send_embeds: list[discord.Embed] = []
         for ranking, players in player_field_data.items():
             for player in players:
-                if (len(names_field) + (len(players))) > 900:
-                    ranking_field += "\n"
-                    names_field += "\n"
-                    data_field += "\n"
+                if (len(names_field) + (len(str(players)))) > 800:
                     send_embeds.append(generic_embed(ranking_field, names_field, data_field))
                     ranking_field = ""
                     names_field = ""
                     data_field = ""
                 ranking_field += f"{ranking}.)\n"
-                names_field += f"{player[0]}\n"
+                names_field += f"{player[0].strip()}\n"
                 data_field += f"{player[1]}\n"
 
         if ranking_field and names_field and data_field:

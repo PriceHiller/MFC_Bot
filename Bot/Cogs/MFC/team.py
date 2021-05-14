@@ -180,7 +180,10 @@ class Team(BaseCog):
             discord_id = team["discord_id"]
             role = guild.get_role(int(discord_id))
             if not role:
-                role = await guild.fetch_roles()
+                for role in await guild.fetch_roles():
+                    if role.id == discord_id:
+                        role = role
+                        break
             if role:
                 role: discord.Role
                 elo = int(team["elo"])
@@ -189,7 +192,7 @@ class Team(BaseCog):
                 else:
                     unsorted_teams[elo].append(role.mention)
             else:
-                log.warning(f"Attempted to get team {team['team_name']}, id: {team['id']}, but they their discord role"
+                log.warning(f"Attempted to get team {team['team_name']}, id: {team['id']}, but their discord role "
                             f"for id {team['discord_id']} was not found!")
 
         total_teams = len(team_lookup.json)

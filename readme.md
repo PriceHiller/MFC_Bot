@@ -77,7 +77,7 @@ loggers:
 
 ## Environment Variables
 
-It is highly encouraged that a `.env` file is defined in the `bot` directory with your variables. If you do not do this,
+It is highly encouraged that a `.env` file is defined in the root directory with your variables. If you do not do this,
 you will need to export all of your variables into your local environment *before* running the bot.
 
 

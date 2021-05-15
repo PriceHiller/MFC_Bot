@@ -40,7 +40,7 @@ class MatchPlanning(BaseCog):
             if task.get_name() == self.plan_loop_name:
                 task.cancel()
 
-    @tasks.loop(seconds=10)
+    @tasks.loop(seconds=600)
     async def plan_loop(self):
         while True:
             await asyncio.sleep(600)  # sleep for 10 minutes

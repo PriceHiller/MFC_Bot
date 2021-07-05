@@ -81,6 +81,7 @@ class MatchPlanning(BaseCog):
             await ctx.send("Unable to connect to the API.")
             return
         discord_team_ids = [team.get("discord_id") for team in known_discord_teams.json]
+        signed_up_teams = []
         days: dict = match_planning_dict["Days"]
         react_dict = {}
         message_num = -1
@@ -92,15 +93,22 @@ class MatchPlanning(BaseCog):
                 for user in users:
                     for role in user.roles:
                         role: discord.Role
-                        for discord_team_id in discord_team_ids:
+                        for index, discord_team_id in enumerate(discord_team_ids):
                             day = list(days.keys())[message_num]
                             if not react_dict.get(day):
                                 react_dict[day] = {}
-                            if role.id == discord_team_id:
+                            if int(role.id) == int(discord_team_id):
                                 inv_map = {v: k for k, v in days[day].items()}
                                 if not react_dict[day].get(inv_map[str(reaction.emoji)]):
                                     react_dict[day][inv_map[str(reaction.emoji)]] = []
                                 react_dict[day][inv_map[str(reaction.emoji)]].append(role.name)
+                                signed_up_teams.append(discord_team_id)
+
+        teams_not_signed_up = []
+        for team_id in discord_team_ids:
+            if team_id not in signed_up_teams:
+                if _team := guild.get_role(int(team_id)):
+                    teams_not_signed_up.append(_team.name)
 
         def write_csv(react_dict: dict, file_path: Path):
             with open(file_path, "w+") as f:
@@ -117,6 +125,12 @@ class MatchPlanning(BaseCog):
                 for time, teams in sign_ups.items():
                     row = [time] + teams
                     csv_writer.writerow(row)
+
+                csv_writer.writerow([])
+                csv_writer.writerow(["Teams Not Signed Up"])
+                csv_writer.writerow(["\n".join(teams_not_signed_up)])
+
+
 
         loop = asyncio.get_event_loop()
         file_path = Path("signups.csv")

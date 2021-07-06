@@ -15,10 +15,7 @@ Once all required settings are configured run the bot via: `python -m bot`
 
 All config values are passed via environment variables. See **Environment Variables**.
 
-It is recommended to define a `.env` file in the `bot` directory with the bot token argument:
-```ini
-discord_bot_token="someDiscordBotToken"
-```
+It is recommended to define a `.env` file in the root directory and place your environment variables there
 
 A requirements file is included to install all dependencies, to do so execute:
 

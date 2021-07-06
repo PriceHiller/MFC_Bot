@@ -96,7 +96,7 @@ class Player(BaseCog):
             for set in match["sets"]:
                 for _round in set["rounds"]:
                     team1_list: list = _round["team1_players"] or []
-                    team2_list: list = _round["team1_players"] or []
+                    team2_list: list = _round["team2_players"] or []
                     team1_list.extend(team2_list)
                     combined = team1_list
                     for player in combined:
@@ -116,7 +116,7 @@ class Player(BaseCog):
                         assists = player_dict["assists"]
                         deaths = player_dict["deaths"]
                         if deaths == 0:
-                            player_dict["kda-r"] = 99999
+                            player_dict["kda"] = 99999
                             player_dict["kd"] = 99999
                         else:
                             player_dict["kda"] = round((kills + assists) / deaths, 2)  # ???

@@ -96,7 +96,7 @@ All api environment variables are preceded by `API_`
 | Variable Name | Example Value  | Description
 | :---          | :---           | :---
 | API_URL       | 127.0.0.1:5000 | The HTTP(S) url of the MFC API
-| API_URL       | wd23sawWAsjdae | The login (authorization) jwt token granted by the api
+| API_TOKEN       | wd23sawWAsjdae | The login (authorization) jwt token granted by the api
 
 
 ### Logging

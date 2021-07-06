@@ -14,5 +14,5 @@ class Config:
             await f.write(json.dumps(new_data, indent=4, ensure_ascii=False, allow_nan=True))
 
     async def read(self) -> dict:
-        async with aiofiles.open(self.config_path, encoding="utf-8") as f:
+        async with aiofiles.open(self.config_path, encoding="utf-8", errors="ignore") as f:
             return json.loads(await f.read())

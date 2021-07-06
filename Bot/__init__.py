@@ -4,8 +4,6 @@ import os
 import yaml
 import aiofiles
 
-import orjson
-
 from logging import config
 from pathlib import Path
 from urllib import parse

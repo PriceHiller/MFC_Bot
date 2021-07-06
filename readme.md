@@ -8,7 +8,7 @@
 
 Ensure you have seen **Configuration**. 
 
-Once all required settings are configured run the bot via: `python -m bot`
+Once all required settings are configured run the bot via: `python -m Bot`
 
 
 ## Configuration
